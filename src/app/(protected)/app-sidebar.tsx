@@ -1,9 +1,11 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { Bot, CreditCard, LayoutDashboard, Plus, Presentation } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { title } from "process"
@@ -44,11 +46,17 @@ const projects = [
 ]
 
 export function AppSidebar() {
-    const pathname = usePathname()
+    const pathname = usePathname();
+    const { open } = useSidebar();
     return (
         <Sidebar collapsible="icon" variant="floating">
             <SidebarHeader>
-                Logo
+                <div className="flex items-center gap-2">
+                    <Image src="/logo.png" alt="logo" width={60} height={60} />
+                    {open && (
+                        <h1 className="text-xl font-bold text-primary/80">Dionysus</h1>
+                    )}
+                </div>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
@@ -56,7 +64,7 @@ export function AppSidebar() {
                         Application
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
-                        <SidebarMenuItem>
+                        <SidebarMenu>
                             {items.map(item => {
                                 return (
                                     <SidebarMenuItem key={item.title}>
@@ -69,7 +77,7 @@ export function AppSidebar() {
                                     </SidebarMenuItem>
                                 )
                             })}
-                        </SidebarMenuItem>
+                        </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
 
@@ -96,14 +104,16 @@ export function AppSidebar() {
                                 )
                             })}
                             <div className="h-2"></div>
-                            <SidebarMenuButton>
-                                <Link href='/create'>
-                                    <Button size='sm' variant={'outline'} className="w-fit">
-                                        <Plus />
-                                        Create Project
-                                    </Button>
-                                </Link>
-                            </SidebarMenuButton>
+                            {open && (
+                                <SidebarMenuItem>
+                                    <Link href='/create'>
+                                        <Button size='sm' variant={'outline'} className="w-fit">
+                                            <Plus />
+                                            Create Project
+                                        </Button>
+                                    </Link>
+                                </SidebarMenuItem>
+                            )}
                         </SidebarMenu>
                     </SidebarContent>
                 </SidebarGroup>
