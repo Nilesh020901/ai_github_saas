@@ -12,6 +12,7 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 import * as trpc from "@trpc/server";
 import {
+  auth,
   getAuth,
   type SignedInAuthObject,
   type SignedOutAuthObject,
@@ -97,6 +98,23 @@ const t = initTRPC.context<Context>().create({
  */
 export const createTRPCRouter = t.router;
 // check if the user is signed in, otherwise throw a UNAUTHORIZED CODE
+
+const isAuthenticated = t.middleware(async ({ next, ctx }) => {
+  const user = await auth()
+  if (!user) {
+    throw new trpc.TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'You must be logged in the access this resource'
+    })
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      user
+    }
+  })
+})
+
 const isAuthed = t.middleware(async ({ next, ctx }) => {
   if (!ctx.auth?.userId) {
     throw new trpc.TRPCError({ code: "UNAUTHORIZED" });
@@ -125,3 +143,4 @@ const isAuthed = t.middleware(async ({ next, ctx }) => {
  */
 export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(isAuthed);
+export const protectedProcedure = t.procedure.use(isAuthenticated);
