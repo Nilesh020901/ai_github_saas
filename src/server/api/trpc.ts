@@ -11,13 +11,7 @@ import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import * as trpc from "@trpc/server";
-import {
-  auth,
-  getAuth,
-  type SignedInAuthObject,
-  type SignedOutAuthObject,
-} from "@clerk/nextjs/server";
-
+import { getAuth } from "@clerk/nextjs/server";
 import { db } from "../db";
 
 /**
@@ -29,7 +23,7 @@ import { db } from "../db";
  */
 
 interface AuthContext {
-  auth: SignedInAuthObject | SignedOutAuthObject;
+  auth: ReturnType<typeof getAuth>;
 }
 
 /**
@@ -43,12 +37,7 @@ interface AuthContext {
  * @see https://create.t3.gg/en/usage/trpc#-serverapitrpcts
  */
 
-export const createContextInner = ({ auth }: AuthContext) => {
-  return {
-    auth,
-    db,
-  };
-};
+export const createContextInner = ({ auth }: AuthContext) => ({ auth, db });
 
 /**
  * This is the actual context you will use in your router. It will be used to process every request
@@ -56,8 +45,8 @@ export const createContextInner = ({ auth }: AuthContext) => {
  *
  * @see https://trpc.io/docs/context
  */
-export const createTRPCContext = (_opts: CreateNextContextOptions) => {
-  return createContextInner({ auth: getAuth(_opts.req) });
+export const createTRPCContext = (opts: CreateNextContextOptions) => {
+  return createContextInner({ auth: getAuth(opts.req) });
 };
 
 /**
@@ -77,8 +66,7 @@ const t = initTRPC.context<Context>().create({
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
+        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
     };
   },
@@ -97,23 +85,24 @@ const t = initTRPC.context<Context>().create({
  * @see https://trpc.io/docs/router
  */
 export const createTRPCRouter = t.router;
+export const publicProcedure = t.procedure;
 // check if the user is signed in, otherwise throw a UNAUTHORIZED CODE
 
-const isAuthenticated = t.middleware(async ({ next, ctx }) => {
-  const user = await auth()
-  if (!user) {
-    throw new trpc.TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'You must be logged in the access this resource'
-    })
-  }
-  return next({
-    ctx: {
-      ...ctx,
-      user
-    }
-  })
-})
+// const isAuthenticated = t.middleware(async ({ next, ctx }) => {
+//   const user = await auth()
+//   if (!user) {
+//     throw new trpc.TRPCError({
+//       code: 'UNAUTHORIZED',
+//       message: 'You must be logged in the access this resource'
+//     })
+//   }
+//   return next({
+//     ctx: {
+//       ...ctx,
+//       user
+//     }
+//   })
+// })
 
 const isAuthed = t.middleware(async ({ next, ctx }) => {
   if (!ctx.auth?.userId) {
@@ -129,6 +118,7 @@ const isAuthed = t.middleware(async ({ next, ctx }) => {
   }
   return next({
     ctx: {
+      ...ctx,
       auth: user,
     },
   });
@@ -141,6 +131,6 @@ const isAuthed = t.middleware(async ({ next, ctx }) => {
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure;
+// export const publicProcedure = t.procedure;
+// export const protectedProcedure = t.procedure.use(isAuthenticated);
 export const protectedProcedure = t.procedure.use(isAuthed);
-export const protectedProcedure = t.procedure.use(isAuthenticated);
